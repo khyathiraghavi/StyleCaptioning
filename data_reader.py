@@ -1,6 +1,7 @@
 import torch
 from PIL import Image
 import pickle
+import codecs
 
 class FlickrDataset(torch.utils.data.Dataset):
     """Flickr 8k dataset."""
@@ -25,9 +26,13 @@ class FlickrDataset(torch.utils.data.Dataset):
         image_path = f"{self.data_folder}/Flicker8k_Dataset/{self.file_names_all[idx]}"
 
         image = Image.open(image_path).convert("RGB")
-        text = self.captions[idx].decode("utf-8").strip()
+        text = self.captions[idx].decode("windows-1252").strip()
         #text = "check this out"
-        encoding = self.processor(image, text, padding="max_length", truncation=True, return_tensors="pt")
+        if idx < len(self.captions_humor):
+            final_text = "In a funny way, " + text
+        else:
+            final_text = "In a romantic way, " + text
+        encoding = self.processor(image, final_text, padding="max_length", truncation=True, return_tensors="pt")
         encoding = {k:v.squeeze() for k,v in encoding.items()}
         return encoding
 
