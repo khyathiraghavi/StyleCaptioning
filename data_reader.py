@@ -2,6 +2,42 @@ import torch
 from PIL import Image
 import pickle
 import codecs
+import json
+import os
+
+class PersonaDataset(torch.utils.data.Dataset):
+    """ Persona Captions dataset."""
+    def __init__(self, data_folder, processor, split='train'):
+        self.data_folder =  data_folder
+        self.processor = processor
+        self.split = split
+        self.data_file = os.path.join(f"{data_folder}/personality_captions", f"{split}.json")
+        self.image_folder_path = os.path.join(f"{data_folder}", "yfcc_images")
+        with open(self.data_file, 'r') as fp:
+            self.data = json.load(fp)
+
+        self.new_data = []
+        for el in self.data:
+            image_path = os.path.join(self.image_folder_path, f"{el['image_hash']}.jpg")
+            if not os.path.exists(image_path):
+                continue
+            else:
+                self.new_data.append(el)
+
+    def __len__(self):
+        return len(self.new_data)
+
+    def __getitem__(self, idx):
+        dataidx = self.new_data[idx]
+        image_path = os.path.join(self.image_folder_path, f"{dataidx['image_hash']}.jpg")
+        image = Image.open(image_path).convert("RGB")
+        personality = dataidx['personality']
+        text = dataidx['comment'].strip()
+        final_text = f"In a {personality} way, " + text
+        encoding = self.processor(image, final_text.lower(), padding="max_length", truncation=True, return_tensors="pt")
+        encoding = {k:v.squeeze() for k,v in encoding.items()}
+        return encoding
+
 
 class FlickrDataset(torch.utils.data.Dataset):
     """Flickr 8k dataset."""
@@ -35,5 +71,8 @@ class FlickrDataset(torch.utils.data.Dataset):
         encoding = self.processor(image, final_text, padding="max_length", truncation=True, return_tensors="pt")
         encoding = {k:v.squeeze() for k,v in encoding.items()}
         return encoding
+
+
+
 
 
